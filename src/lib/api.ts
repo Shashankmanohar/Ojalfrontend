@@ -83,6 +83,9 @@ api.interceptors.response.use(
               variant: 'destructive',
             });
             if (window.location.pathname.includes('/admin')) {
+              // Clear admin auth so /admin/login renders instead of redirecting back to /admin
+              localStorage.removeItem('adminToken');
+              localStorage.removeItem('admin');
               window.location.href = '/admin/login';
             } else {
               window.location.href = '/auth';
