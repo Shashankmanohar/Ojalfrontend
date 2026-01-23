@@ -77,18 +77,21 @@ const authService = {
     },
 
     // Reset password with OTP
-    async resetPasswordWithOTP(email: string, otp: string, newPassword: string): Promise<ApiResponse> {
+    async resetPasswordWithOTP(email: string, otp: string, password: string): Promise<ApiResponse> {
         const response = await api.post<ApiResponse>('/api/users/reset-password-otp', {
             email,
             otp,
-            newPassword,
+            password, // Backend expects 'password', not 'newPassword'
         });
         return response.data;
     },
 
     // Change password (for logged-in users)
-    async changePassword(data: ChangePasswordData): Promise<ApiResponse> {
-        const response = await api.put<ApiResponse>('/api/users/change-password', data);
+    async changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse> {
+        const response = await api.put<ApiResponse>('/api/users/change-password', {
+            currentPassword,
+            newPassword,
+        });
         return response.data;
     },
 

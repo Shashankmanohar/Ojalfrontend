@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Package, ArrowLeft, ImageIcon, LogOut, ShoppingBag, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, ArrowLeft, ImageIcon, LogOut, ShoppingBag, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,6 +33,18 @@ import { useAdminAuth } from '@/context/AdminAuthContext';
 import adminService, { Product, ProductFormData } from '@/services/adminService';
 import { toast } from '@/hooks/use-toast';
 
+// Predefined product categories
+const PRODUCT_CATEGORIES = [
+  'All Products',
+  'Plates',
+  'Bowls',
+  'Cups & Mugs',
+  'Serving Crockery',
+  'Drinkware',
+  'Tea & Coffee Crockery',
+  'Specialty Crockery'
+];
+
 export default function Admin() {
   const { admin, adminLogout } = useAdminAuth();
   const navigate = useNavigate();
@@ -36,7 +55,7 @@ export default function Admin() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     description: '',
@@ -107,16 +126,47 @@ export default function Admin() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      const fileArray = Array.from(files);
+      // Limit to 5 images
+      const fileArray = Array.from(files).slice(0, 5);
+
+      if (files.length > 5) {
+        toast({
+          title: 'Image Limit',
+          description: 'Maximum 5 images allowed. Only first 5 images will be used.',
+          variant: 'destructive',
+        });
+      }
+
       setSelectedImages(fileArray);
 
-      // Create preview for first image
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(fileArray[0]);
+      // Create previews for all images
+      const previews: string[] = [];
+      let loadedCount = 0;
+
+      fileArray.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          previews[index] = reader.result as string;
+          loadedCount++;
+
+          if (loadedCount === fileArray.length) {
+            setImagePreviews(previews);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const newImages = selectedImages.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    setSelectedImages(newImages);
+    setImagePreviews(newPreviews);
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, category: value }));
   };
 
   const resetForm = () => {
@@ -135,7 +185,7 @@ export default function Admin() {
     });
     setEditingProduct(null);
     setSelectedImages([]);
-    setImagePreview('');
+    setImagePreviews([]);
   };
 
   const handleEdit = (product: Product) => {
@@ -334,13 +384,22 @@ export default function Admin() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="category">Category *</Label>
-                          <Input
-                            id="category"
-                            name="category"
+                          <Select
                             value={formData.category}
-                            onChange={handleInputChange}
+                            onValueChange={handleCategoryChange}
                             required
-                          />
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PRODUCT_CATEGORIES.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
 
@@ -418,21 +477,36 @@ export default function Admin() {
                         <p className="text-xs text-muted-foreground">
                           Select up to 5 images. First image will be the main product image.
                         </p>
-                        {imagePreview && (
-                          <div className="mt-2">
-                            <p className="text-sm font-medium mb-2">Preview:</p>
-                            <div className="w-32 h-32 rounded-lg overflow-hidden bg-muted">
-                              <img
-                                src={imagePreview}
-                                alt="Preview"
-                                className="w-full h-full object-cover"
-                              />
+                        {imagePreviews.length > 0 && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-medium">Preview ({imagePreviews.length}/5):</p>
                             </div>
-                            {selectedImages.length > 1 && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                +{selectedImages.length - 1} more image(s)
-                              </p>
-                            )}
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                              {imagePreviews.map((preview, index) => (
+                                <div key={index} className="relative group">
+                                  <div className="w-full h-24 rounded-lg overflow-hidden bg-muted border-2 border-border">
+                                    <img
+                                      src={preview}
+                                      alt={`Preview ${index + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage(index)}
+                                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                  {index === 0 && (
+                                    <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded">
+                                      Main
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>

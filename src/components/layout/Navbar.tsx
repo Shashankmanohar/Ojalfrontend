@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ShoppingBag, Search, User, LogOut, Shield } from 'lucide-react';
+import { Menu, X, ShoppingBag, Search, User, LogOut, Shield, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -104,6 +104,13 @@ export function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem asChild>
+                    <Link to="/change-password" className="flex items-center gap-2 cursor-pointer">
+                      <Lock size={16} />
+                      Change Password
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 cursor-pointer text-destructive">
                     <LogOut size={16} />
                     Sign Out
@@ -146,6 +153,13 @@ export function Navbar() {
                       Admin Panel
                     </Link>
                   )}
+                  <Link
+                    to="/change-password"
+                    className="text-lg font-medium tracking-wide text-foreground/80"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Change Password
+                  </Link>
                   <button
                     onClick={() => {
                       handleSignOut();
